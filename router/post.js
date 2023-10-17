@@ -70,7 +70,58 @@ router.get("/search", async (req, res) => {
 })
 
 router.get("/main", async (req, res) => {
-    const popularSql = ""
+    const findpopularSql = "SELECT postIndex, COUNT(postIndex) FROM narock.like WHERE likeTimestamp >= CURRENT_DATE GROUP BY postIndex HAVING COUNT(postIndex) >= 1 ORDER BY 2 DESC"
+    const popularSql = "SELECT * FROM narock.post WHERE postIndex=$1"
+    const bandSql = "SELECT * FROM narock.band WHERE bandIndex=$1"
+    const recentSql = "SELECT * FROM narock.post WHERE postTimestamp >= CURRENT_DATE ORDER BY postTimestamp ASC LIMIT 4"
+    const noticeSql = "SELECT * FROM narock.post WHERE postCategory=0 ORDER BY postTimestamp ASC LIMIT 4"
+    let client
+
+    const result = {
+        "success": false,
+        "message": "",
+        "popularPost": [],
+        "notice": [],
+        "news": []
+    }
+
+    try {
+        client = new Client(pgClient)
+        await client.connect()
+        const data = await client.query(findpopularSql)
+        for(var i=0; i<data.rows.length; i++) {
+            const popularPost = await client.query(popularSql, [data.rows[i].postindex])
+            const bandName = await client.query(bandSql, [popularPost.rows[0].bandindex])
+            let popularData = {}
+            popularData.postIndex = data.rows[i].postindex
+            popularData.postTitle = popularPost.rows[0].posttitle
+            popularData.bandIndex = popularPost.rows[0].bandindex
+            popularData.bandName = bandName.rows[0].bandname
+            popularData.postLikes = data.rows[i].count
+            result.popularPost.push(popularData)
+        }
+        const news = await client.query(recentSql)
+        for(var i=0; i<news.rows.length; i++) {
+            let newsData = {}
+            newsData.postIndex = news.rows[i].postindex
+            newsData.postTitle = news.rows[i].posttitle
+            newsData.postTimestamp = news.rows[i].posttimestamp
+            console.log(newsData)
+            result.news.push(newsData)
+        }
+        const notice = await client.query(noticeSql)
+        for(var i=0; i<notice.rows.length; i++) {
+            let noticeData = {}
+            noticeData.postIndex = notice.rows[i].postindex
+            noticeData.postTitle = notice.rows[i].posttitle
+            noticeData.postTimestamp = notice.rows[i].posttimestamp
+            result.notice.push(noticeData)
+        }
+    } catch(err) {
+        result.message = err.message
+    }
+    if(client) client.end()
+    res.send(result)
 })
 
 router.get("/all", async (req, res) => {

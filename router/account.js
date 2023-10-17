@@ -49,7 +49,8 @@ router.post("/login", async (req, res) => {  //로그인
                 "expiresIn": "24h",
                 "issuer": process.env.jwtIssuer
             })
-            res.cookie("token", jwtToken)
+            res.cookie("token", jwtToken, {sameSite: "none", secure: true})
+            // res.cookie("token", jwtToken)
         }
         else{
             result.message = "아이디 또는 비밀번호 틀림"
@@ -260,7 +261,7 @@ router.put("/", authVerify, checkProfileImg, updateProfileImg.single("imageFile"
             "issuer": process.env.jwtIssuer
         })
         res.clearCookie("token")
-        res.cookie("token", jwtToken)
+        res.cookie("token", jwtToken, {sameSite: "none", secure: true})
         result.success = true
     } catch(err) {
         result.message = err.message

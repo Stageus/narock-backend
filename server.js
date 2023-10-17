@@ -1,8 +1,8 @@
 const express = require("express")
 const cookieParser = require("cookie-parser")
 const app = express()
-// const port = 80
-const port = 3000
+const port = 80
+// const port = 3000
 const https = require("https")
 const fs = require("fs")
 app.use(cookieParser())
@@ -26,10 +26,10 @@ app.use((req, res, next) => {
     next()
 })
 
-// const privateKey = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/privkey.pem")
-// const fullchain = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/fullchain.pem")
-// const cert = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/cert.pem")
-// const credentials = {key: privateKey, ca: fullchain, cert: cert}
+const privateKey = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/privkey.pem")
+const fullchain = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/fullchain.pem")
+const cert = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/cert.pem")
+const credentials = {key: privateKey, ca: fullchain, cert: cert}
 
 const accountApi = require("./router/account.js")
 app.use("/account", accountApi)
@@ -57,6 +57,6 @@ app.listen(port, () => {
     console.log(`${port} 번에서 웹 서버가 실행됨`)
 })
 
-// https.createServer(credentials, app).listen(443, () => {
-//     console.log("443번에서 https 서버가 실행됨")
-// })
+https.createServer(credentials, app).listen(443, () => {
+    console.log("443번에서 https 서버가 실행됨")
+})
