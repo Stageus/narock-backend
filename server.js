@@ -8,23 +8,29 @@ const fs = require("fs")
 app.use(cookieParser())
 app.use(express.json())
 app.set('trust proxy', true)
+const path = require("path")
 require("dotenv").config()
 
+app.use(express.static(path.join(__dirname, 'build')));
 app.use((req, res, next) => {
     const corsWhitelist = [
         'https://narock.site',
         'https://www.narock.site',
         'https://3.35.171.221',
-        'http://localhost:3000'
+        'http://localhost:3000',
+        'http://192.168.0.111:3000',
+        'https://www.narock.site/resetpassword'
     ]
     if (corsWhitelist.indexOf(req.headers.origin) !== -1) {
         res.header('Access-Control-Allow-Origin', req.headers.origin)
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
-        res.header("Access-Control-Allow-Credentials", true)
+        res.header("Access-Control-Allow-Credentials", true) 
     }
     next()
 })
+
+
 
 const privateKey = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/privkey.pem")
 const fullchain = fs.readFileSync("/etc/letsencrypt/live/www.narock.site/fullchain.pem")
@@ -49,8 +55,8 @@ app.use("/postRequest", postRequestApi)
 const commentApi = require("./router/comment.js")
 app.use("/comment", commentApi)
 
-app.get("/", (req, res) => {
-    res.sendFile(__dirname + "/changePwPage.html")
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'))
 })
 
 app.listen(port, () => {

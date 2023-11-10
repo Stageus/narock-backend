@@ -15,6 +15,10 @@
     <input type="text" id="pwCheck">
     비밀번호 확인
     <input type="button" value="비밀번호 변경" onclick="pwChange()">
+    <div></div>
+    <input type="text" id="idValue">
+    <input type="text" id="pwValue">
+    <input type="button" value="로그인" onclick="login()">
 </body>
 
 <script>
@@ -38,6 +42,21 @@
         })
         const response = await result.json()
         console.log(response)   
+    }
+    const login = async () => {
+        const idValue = document.getElementById("idValue").value
+        const pwValue = document.getElementById("pwValue").value
+        const result = await fetch("/account/login", {
+            "method": "POST",
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": JSON.stringify({
+                "idValue": idValue,
+                "pwValue": pwValue
+            })
+        })
+        const response = await result.json()
     }
 </script>
 </html>

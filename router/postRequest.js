@@ -9,6 +9,7 @@ router.get("/all", authVerify, async (req, res) => {
     const pages = req.query.pages - 1
     const userPosition = req.decoded.userPosition
     const sql = "SELECT * FROM narock.postCreateRequest ORDER BY postCreateRequestTimestamp DESC LIMIT 20 OFFSET 20*$1"
+    const userDataSql = "SELECT * FROM narock.account WHERE userIndex=$1"
     const value = [pages]
     let client
 
@@ -28,10 +29,23 @@ router.get("/all", authVerify, async (req, res) => {
         client = new Client(pgClient)
         await client.connect()
         const data = await client.query(sql, value)
+        console.log(data.rows)
         if(data.rows.length == 0) {
             throw new Error("해당하는 페이지의 결과값이 없습니다.")
         }
-        result.data.push(data.rows)
+        for(var i=0; i<data.rows.length; i++) {
+            const userData = await client.query(userDataSql, [data.rows[i].userindex])
+            let tmp = {}
+            tmp.postcreaterequestindex = data.rows[i].postcreaterequestindex
+            tmp.postcreaterequesttimestamp = data.rows[i].postcreaterequesttimestamp
+            tmp.postname = data.rows[i].postname
+            tmp.requestdetail = data.rows[i].requestdetail
+            tmp.userindex = data.rows[i].userindex
+            tmp.userid = userData.rows[0].userid
+            tmp.usernickname = userData.rows[0].usernickname
+            result.data.push(tmp)
+        }
+        // result.data.push(data.rows)
         result.success = true
 
     } catch(err) {

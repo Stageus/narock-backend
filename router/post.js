@@ -70,11 +70,12 @@ router.get("/search", async (req, res) => {
 })
 
 router.get("/main", async (req, res) => {
+    console.log(req.cookies)
     const findpopularSql = "SELECT postIndex, COUNT(postIndex) FROM narock.like WHERE likeTimestamp >= CURRENT_DATE GROUP BY postIndex HAVING COUNT(postIndex) >= 1 ORDER BY 2 DESC"
     const popularSql = "SELECT * FROM narock.post WHERE postIndex=$1"
     const bandSql = "SELECT * FROM narock.band WHERE bandIndex=$1"
-    const recentSql = "SELECT * FROM narock.post WHERE postTimestamp >= CURRENT_DATE ORDER BY postTimestamp ASC LIMIT 4"
-    const noticeSql = "SELECT * FROM narock.post WHERE postCategory=0 ORDER BY postTimestamp ASC LIMIT 4"
+    const recentSql = "SELECT * FROM narock.post WHERE postTimestamp >= CURRENT_DATE ORDER BY postTimestamp DESC LIMIT 4"
+    const noticeSql = "SELECT * FROM narock.post WHERE postCategory=0 AND bandIndex=1 ORDER BY postTimestamp DESC LIMIT 4"
     let client
 
     const result = {
@@ -96,6 +97,7 @@ router.get("/main", async (req, res) => {
             popularData.postIndex = data.rows[i].postindex
             popularData.postTitle = popularPost.rows[0].posttitle
             popularData.bandIndex = popularPost.rows[0].bandindex
+            popularData.postCategory = popularPost.rows[0].postcategory
             popularData.bandName = bandName.rows[0].bandname
             popularData.postLikes = data.rows[i].count
             result.popularPost.push(popularData)
@@ -106,6 +108,7 @@ router.get("/main", async (req, res) => {
             newsData.postIndex = news.rows[i].postindex
             newsData.postTitle = news.rows[i].posttitle
             newsData.postTimestamp = news.rows[i].posttimestamp
+            newsData.postCategory = news.rows[i].postcategory
             console.log(newsData)
             result.news.push(newsData)
         }
@@ -115,6 +118,7 @@ router.get("/main", async (req, res) => {
             noticeData.postIndex = notice.rows[i].postindex
             noticeData.postTitle = notice.rows[i].posttitle
             noticeData.postTimestamp = notice.rows[i].posttimestamp
+            noticeData.postCategory = notice.rows[i].postcategory
             result.notice.push(noticeData)
         }
     } catch(err) {
@@ -185,6 +189,7 @@ router.get("/", async (req, res) => {
     const likeSql = "SELECT COUNT(*) FROM narock.like WHERE postIndex=$1"
     const commentSql = "SELECT * FROM narock.comment WHERE postIndex=$1"
     const replySql = "SELECT * FROM narock.reply WHERE commentIndex=$1"
+    const userNicknameSql = "SELECT * FROM narock.account WHERE userIndex=$1"
     const value = [postIndex]
     let client
 
@@ -235,9 +240,18 @@ router.get("/", async (req, res) => {
         const comment = await client.query(commentSql, value)
         if(comment.rows.length > 0) {
             result.comment.push(comment.rows)
+            for(var j=0; j<comment.rows.length; j++) {
+                const userNickname = await client.query(userNicknameSql, [comment.rows[j].userindex])
+                result.comment[0][j].usernickname = userNickname.rows[0].usernickname
+            }
             for(var i=0; i<comment.rows.length; i++) {
                 const reply = await client.query(replySql, [comment.rows[i].commentindex])
                 result.reply[i] = reply.rows
+                for(var j=0; j<reply.rows.length; j++) {
+                    const userNickname = await client.query(userNicknameSql, [reply.rows[j].userindex])
+                    result.reply[i][j].usernickname = userNickname.rows[0].usernickname
+                }
+                // console.log(reply.rows[0].userindex)
             }
         }
         result.success = true
@@ -390,6 +404,7 @@ router.post("/like", authVerify, async (req, res) => {
     const userIndex = req.decoded.userIndex
     const postSql = "SELECT * FROM narock.post WHERE postIndex=$1"
     const checkSql = "SELECT * FROM narock.like WHERE userIndex=$1 AND postIndex=$2"
+    const cancelSql = "DELETE FROM narock.like WHERE userIndex=$1 AND postIndex=$2"
     const likeSql = "INSERT INTO narock.like (userIndex, postIndex) VALUES($1, $2)"
     const values = [userIndex, postIndex]
     let client
@@ -407,10 +422,14 @@ router.post("/like", authVerify, async (req, res) => {
             throw new Error("해당하는 게시글이 없습니다.")
         }
         const check = await client.query(checkSql, values)
+        // console.log(check.rows)
         if(check.rows.length > 0) {
-            throw new Error("이미 좋아요를 눌렀습니다.")
+            await client.query(cancelSql, values)
+            // throw new Error("이미 좋아요를 눌렀습니다.")
         }
-        await client.query(likeSql, values)
+        else {
+            await client.query(likeSql, values)
+        }
         result.success = true
     } catch(err) {
         result.message = err.message

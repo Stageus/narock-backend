@@ -33,6 +33,7 @@ router.post("/login", async (req, res) => {  //로그인
         const row = data.rows
         if(row.length != 0) {
             result.success = true
+            res.clearCookie("token")
             const jwtToken = jwt.sign({
                 "userIndex": row[0].userindex,
                 "userId": row[0].userid,
@@ -49,7 +50,7 @@ router.post("/login", async (req, res) => {  //로그인
                 "expiresIn": "24h",
                 "issuer": process.env.jwtIssuer
             })
-            res.cookie("token", jwtToken, {sameSite: "none", secure: true})
+            res.cookie("token", jwtToken, {httpOnly: false, sameSite: "none", secure: true, expires: new Date(Date.now() + 360000)})
             // res.cookie("token", jwtToken)
         }
         else{
@@ -144,6 +145,8 @@ router.get("/all", authVerify, async (req, res) => {
 })
 
 router.get("/", authVerify, async (req, res) => {
+    console.log(req.cookies)
+    console.log(req.cookies.token)
     const result = {
         "success": false,
         "message": "",
@@ -261,7 +264,7 @@ router.put("/", authVerify, checkProfileImg, updateProfileImg.single("imageFile"
             "issuer": process.env.jwtIssuer
         })
         res.clearCookie("token")
-        res.cookie("token", jwtToken, {sameSite: "none", secure: true})
+        res.cookie("token", jwtToken, {httpOnly: false, sameSite: "none", secure: true})
         result.success = true
     } catch(err) {
         result.message = err.message
@@ -387,8 +390,9 @@ router.post("/email", async (req, res) => {
                 from: process.env.emailAddress,
                 to: emailValue,
                 subject: "비밀번호 수정 링크",
-                html: `<p>비밀번호 수정 링크를 클릭해 비밀번호를 수정하세요:</p>
-                <p> <a href="http://3.35.171.221:3000/?token=${jwtToken}">비밀번호 수정 링크</a></p>
+                html: `<p>회원님의 아이디는 ${data.rows[0].userid}입니다.<p>
+                <p>비밀번호 수정 링크를 클릭해 비밀번호를 수정하세요:</p>
+                <p> <a href="https://narock.site/resetpassword/?token=${jwtToken}">비밀번호 수정 링크</a></p>
                 <p>This link will expire on 24hours.</p>`
             }
             await smtpTransport.sendMail(mailOptions)

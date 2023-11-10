@@ -7,6 +7,8 @@ const authVerify = async (req, res, next) => {
         "message": null
     }
     const authToken = req.cookies.token
+    console.log(req.cookies)
+    console.log(req.cookies.token)
 
     try {
 
@@ -15,7 +17,7 @@ const authVerify = async (req, res, next) => {
         }
 
         req.decoded = jwt.verify(authToken, process.env.jwtSecretKey)
-        result.success = true      
+        result.success = true
         return next()
 
     } catch (err){

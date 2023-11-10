@@ -3,6 +3,8 @@ const {Client} = require("pg")
 const pgClient = require("../config/pgClient.js")
 const smtpTransport = require("../config/email.js")
 const bcrypt = require("bcrypt")
+const passport = require("passport")
+const jwt = require("jsonwebtoken")
 
 router.post("/email/signUp", async (req, res) => {
     const userEmail = req.body.emailValue
@@ -28,7 +30,8 @@ router.post("/email/signUp", async (req, res) => {
         }
         const randNum = Math.random().toString().substr(2,6)
         const authNum = await bcrypt.hash(randNum, 10)
-        res.cookie("authNum", authNum, {maxAge: 1000*60*3})
+        res.cookie("authNum", authNum, {httpOnly: false, sameSite: "none", secure: true})
+        // res.cookie("authNum", authNum)
         const mailOptions = {
             from: process.env.emailAddress,
             to: userEmail,
@@ -48,6 +51,8 @@ router.post("/email/signUp", async (req, res) => {
 router.post("/email/signUp/confirm", async (req, res) => {
     const authCode = req.body.authCode
     const authNum = req.cookies.authNum
+    console.log(req.cookies)
+    console.log(req.cookies.authNum)
     console.log(authNum)
 
     const result = {
@@ -66,6 +71,12 @@ router.post("/email/signUp/confirm", async (req, res) => {
         result.message = err.message
     }
     res.send(result)
+})
+
+router.get("/kakao", passport.authenticate("kakao"))
+
+router.get("/kakao/callback", passport.authenticate("kakao", { failureRedirect: "/account/login" }), (req, res) => {
+    res.redirect("/post/main")
 })
 
 module.exports = router

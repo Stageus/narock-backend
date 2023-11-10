@@ -55,7 +55,7 @@ router.get("/", authVerify, async (req, res) => {
         }
         result.bandIndex = data.rows[0].bandindex
         result.bandName = data.rows[0].bandname
-
+        result.success = true
     } catch(err) {
         result.message = err.message
     }
