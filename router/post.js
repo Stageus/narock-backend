@@ -74,7 +74,7 @@ router.get("/main", async (req, res) => {
     const findpopularSql = "SELECT postIndex, COUNT(postIndex) FROM narock.like WHERE likeTimestamp >= CURRENT_DATE GROUP BY postIndex HAVING COUNT(postIndex) >= 1 ORDER BY 2 DESC"
     const popularSql = "SELECT * FROM narock.post WHERE postIndex=$1"
     const bandSql = "SELECT * FROM narock.band WHERE bandIndex=$1"
-    const recentSql = "SELECT * FROM narock.post WHERE postTimestamp >= CURRENT_DATE ORDER BY postTimestamp DESC LIMIT 4"
+    const recentSql = "SELECT * FROM narock.post WHERE postCategory=4 AND bandIndex=1 ORDER BY postTimestamp DESC LIMIT 4"
     const noticeSql = "SELECT * FROM narock.post WHERE postCategory=0 AND bandIndex=1 ORDER BY postTimestamp DESC LIMIT 4"
     let client
 
@@ -132,6 +132,7 @@ router.get("/all", async (req, res) => {
     const postCategory = req.query.postCategory
     const bandIndex = req.query.bandIndex
     const pages = req.query.pages - 1
+    const postCountSql = "SELECT COUNT(*) FROM narock.post WHERE postCategory=$1 AND bandIndex=$2 AND isFixed=false"
     const postListSql = "SELECT * FROM narock.post WHERE postCategory=$1 AND bandIndex=$2 AND isFixed=false ORDER BY postTimestamp DESC LIMIT 20 OFFSET 20*$3"
     const fixedPostListSql = "SELECT * FROM narock.post WHERE isFixed=true ORDER BY postTimestamp"
     const likeSql = "SELECT COUNT(*) FROM narock.like WHERE postIndex=$1"
@@ -142,7 +143,8 @@ router.get("/all", async (req, res) => {
         "success": false,
         "message": "",
         "fixedPost": [],
-        "post": []
+        "post": [],
+        "postCount": ""
     }
 
     try {
@@ -151,6 +153,8 @@ router.get("/all", async (req, res) => {
         }
         client = new Client(pgClient)
         await client.connect()
+        const postCount = await client.query(postCountSql, [postCategory, bandIndex])
+        result.postCount = postCount.rows[0].count
         const fixedPost = await client.query(fixedPostListSql)
         if(fixedPost.rows.length == 0) {
             throw new Error("해당 키워드를 가진 데이터가 없음")
@@ -208,6 +212,8 @@ router.get("/", async (req, res) => {
         "userIndex": null,
         "bandIndex": null,
         "postLikes": null,
+        "userNickname": null,
+        "userProfileImg": null,
         "comment": [],
         "reply": []
     }
@@ -238,11 +244,22 @@ router.get("/", async (req, res) => {
         const postLikes = await client.query(likeSql, value)
         result.postLikes = postLikes.rows[0].count
         const comment = await client.query(commentSql, value)
+        const userInfo = await client.query(userNicknameSql, [post.rows[0].userindex])
+        result.userNickname = userInfo.rows[0].usernickname
+        if(userInfo.rows[0].userProfileImg) {
+            result.userProfileImg = userInfo.rows[0].userProfileImg
+        }
         if(comment.rows.length > 0) {
             result.comment.push(comment.rows)
             for(var j=0; j<comment.rows.length; j++) {
                 const userNickname = await client.query(userNicknameSql, [comment.rows[j].userindex])
                 result.comment[0][j].usernickname = userNickname.rows[0].usernickname
+                if(userNickname.rows[0].userProfileImg) {
+                    result.comment[0][j].userprofileimg = userNickname.rows[0].userProfileImg
+                }
+                else {
+                    result.comment[0][j].userprofileimg = null
+                }
             }
             for(var i=0; i<comment.rows.length; i++) {
                 const reply = await client.query(replySql, [comment.rows[i].commentindex])
@@ -250,6 +267,13 @@ router.get("/", async (req, res) => {
                 for(var j=0; j<reply.rows.length; j++) {
                     const userNickname = await client.query(userNicknameSql, [reply.rows[j].userindex])
                     result.reply[i][j].usernickname = userNickname.rows[0].usernickname
+                    if(userNickname.rows[0].userProfileImg) {
+                        result.reply[i][j].userprofileimg = userNickname.rows[0].userProfileImg
+                    }
+                    else {
+                        result.reply[i][j].userprofileimg = null
+                    }
+                    
                 }
                 // console.log(reply.rows[0].userindex)
             }

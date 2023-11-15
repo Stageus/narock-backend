@@ -7,8 +7,6 @@ const authVerify = async (req, res, next) => {
         "message": null
     }
     const authToken = req.cookies.token
-    console.log(req.cookies)
-    console.log(req.cookies.token)
 
     try {
 

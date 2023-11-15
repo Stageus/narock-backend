@@ -145,8 +145,6 @@ router.get("/all", authVerify, async (req, res) => {
 })
 
 router.get("/", authVerify, async (req, res) => {
-    console.log(req.cookies)
-    console.log(req.cookies.token)
     const result = {
         "success": false,
         "message": "",
@@ -210,7 +208,7 @@ router.put("/", authVerify, checkProfileImg, updateProfileImg.single("imageFile"
     const updateProfileSql = "UPDATE narock.account SET (userNickname, userPw, userProfileImg)=($1, $2, $3) WHERE userIndex=$4"
     const userIndex = [userIndexValue]
     const duplicationCheckValue = [newNicknameValue]
-    const updateValues = [newNicknameValue, newPasswordValue, userProfileImgUrl, userIndexValue]
+    let updateValues = [newNicknameValue, newPasswordValue, userProfileImgUrl, userIndexValue]
     let client
 
     const result = {
@@ -241,9 +239,11 @@ router.put("/", authVerify, checkProfileImg, updateProfileImg.single("imageFile"
         }
         if(newNicknameValue.length == 0) {
             newNicknameValue = row[0].usernickname
+            updateValues = [row[0].usernickname, newPasswordValue, userProfileImgUrl, userIndexValue]
         }
         if(newPasswordValue.length == 0) {
             newPasswordValue = row[0].userpw
+            updateValues = [newNicknameValue, row[0].userpw, userProfileImgUrl, userIndexValue]
         }
         await client.query(updateProfileSql, updateValues)
         const newData = await client.query(userProfileSql, userIndex)

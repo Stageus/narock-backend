@@ -51,9 +51,6 @@ router.post("/email/signUp", async (req, res) => {
 router.post("/email/signUp/confirm", async (req, res) => {
     const authCode = req.body.authCode
     const authNum = req.cookies.authNum
-    console.log(req.cookies)
-    console.log(req.cookies.authNum)
-    console.log(authNum)
 
     const result = {
         "success": false,
